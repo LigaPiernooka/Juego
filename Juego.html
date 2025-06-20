@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Barras Piernooka Game - Batalla en la Tarima</title>
+<style>
+  /* ... (mantengo tus estilos originales sin cambios) ... */
+</style>
+</head>
+<body>
+
+<!-- Intro pantalla -->
+<div id="intro">
+  <h1>Barras Piernooka Game</h1>
+  
+  <p>Ingresa tu nombre:</p>
+  <input type="text" id="playerNameInput" placeholder="Tu nombre" />
+
+  <p>Selecciona a tu rival:</p>
+  <select id="rivalSelect">
+    <option value="Fran">Fran (Fácil)</option>
+    <option value="Kaibil">Kaibil (Regular)</option>
+    <option value="Limonero">Limonero (Difícil)</option>
+    <option value="Presidente">Presidente (Imposible)</option>
+  </select>
+
+  <p><strong>Instrucciones:</strong></p>
+  <p>Escribe tu mejor barra (línea de rap) en 60 segundos y presiona "Enviar".</p>
+  <p>El rival responderá y se decidirá quién gana la ronda.<br>Gana el primero que llegue a 3 puntos.</p>
+
+  <button id="startGameBtn">Jugar</button>
+</div>
+
+<!-- Juego principal -->
+<div id="game">
+  <h1>Barras Piernooka Game</h1>
+
+  <div id="stage">
+    <div class="character player">
+      <div class="avatar"></div>
+      <h3 id="playerNameDisplay">Tú</h3>
+      <div id="playerScoreDisplay">Puntos: 0</div>
+    </div>
+    <div class="character enemy">
+      <div class="avatar"></div>
+      <h3 id="enemyNameDisplay">Rival</h3>
+      <div id="enemyScoreDisplay">Puntos: 0</div>
+    </div>
+  </div>
+
+  <div id="inputSection">
+    <textarea id="barraInput" rows="3" placeholder="Escribe tu barra aquí..." maxlength="140"></textarea>
+    <div id="timer">Tiempo restante: 60s</div>
+    <button id="sendBtn">Enviar Barra</button>
+  </div>
+
+  <div id="messages">Escribe tu mejor barra y presiona enviar.</div>
+
+  <button id="restartBtn">Reiniciar Juego</button>
+</div>
+
+<script>
+  const rivals = {
+    Fran: {
+      barras: [
+        "Me esfuerzo pero no llego a tu nivel.",
+        "Hoy vine a perder, me da igual.",
+        "Tu barra me deja sin qué decir.",
+        "Soy novato, lo reconozco."
+      ],
+      dificultad: 0.3
+    },
+    Kaibil: {
+      barras: [
+        "En la tarima no me rindo, soy letal.",
+        "Respondo fuerte, vengo a pelear.",
+        "Cuidado, soy nivel regular.",
+        "No me subestimes, puedo ganar."
+      ],
+      dificultad: 0.5
+    },
+    Limonero: {
+      barras: [
+        "Soy la espina que no podrás quitar.",
+        "Mis barras pican, te van a clavar.",
+        "Vengo con fuego, te vas a quemar.",
+        "Me llamo Limonero, difícil de tumbar."
+      ],
+      dificultad: 0.7
+    },
+    Presidente: {
+      barras: [
+        "Soy el rey de la tarima, imposible de bajar.",
+        "Tus barras son aire, las mías son puñal.",
+        "Eres bueno, pero yo soy inmortal.",
+        "Solo los dioses me pueden derrotar."
+      ],
+      dificultad: 0.9
+    }
+  };
+
+  let selectedRival = "Fran";
+  let playerName = "Tú";
+  let playerScore = 0;
+  let enemyScore = 0;
+  let timeLeft = 60;
+  let timerInterval = null;
+  let gameActive = false;
+
+  const barraInput = document.getElementById('barraInput');
+  const timerDisplay = document.getElementById('timer');
+  const sendBtn = document.getElementById('sendBtn');
+  const messages = document.getElementById('messages');
+  const playerScoreDisplay = document.getElementById('playerScoreDisplay');
+  const enemyScoreDisplay = document.getElementById('enemyScoreDisplay');
+  const restartBtn = document.getElementById('restartBtn');
+  const intro = document.getElementById('intro');
+  const game = document.getElementById('game');
+  const startGameBtn = document.getElementById('startGameBtn');
+  const playerNameDisplay = document.getElementById('playerNameDisplay');
+  const enemyNameDisplay = document.getElementById('enemyNameDisplay');
+
+  function startTimer() {
+    timeLeft = 60;
+    timerDisplay.textContent = `Tiempo restante: ${timeLeft}s`;
+    barraInput.disabled = false;
+    sendBtn.disabled = false;
+    barraInput.value = '';
+    barraInput.focus();
+
+    timerInterval = setInterval(() => {
+      timeLeft--;
+      timerDisplay.textContent = `Tiempo restante: ${timeLeft}s`;
+      if (timeLeft <= 0) {
+        clearInterval(timerInterval);
+        barraInput.disabled = true;
+        sendBtn.disabled = true;
+        if (gameActive) {
+          messages.textContent = "Se acabó el tiempo. No escribiste ninguna barra.";
+          enemyTurn('');
+        }
+      }
+    }, 1000);
+  }
+
+  function enemyTurn(playerBar) {
+    const rival = rivals[selectedRival];
+    const enemyBar = rival.barras[Math.floor(Math.random() * rival.barras.length)];
+
+    let resultMsg = `<strong>${playerName}:</strong> ${playerBar || '[Sin barra]'}<br><strong>${selectedRival}:</strong> ${enemyBar}`;
+
+    let playerWins = false;
+    if (!playerBar) {
+      playerWins = false;
+    } else {
+      let winProbability = 1 - rival.dificultad;
+      if (selectedRival === "Presidente") {
+        winProbability *= 0.5; // Hacerlo más difícil todavía
+      }
+      playerWins = Math.random() < winProbability;
+    }
+
+    if (playerWins) {
+      playerScore++;
+      resultMsg += "<br><em>¡Ganaste esta ronda!</em>";
+    } else {
+      enemyScore++;
+      resultMsg += "<br><em>" + selectedRival + " gana esta ronda.</em>";
+    }
+
+    updateScores();
+    messages.innerHTML = resultMsg;
+
+    checkGameOver();
+  }
+
+  function updateScores() {
+    playerScoreDisplay.textContent = `Puntos: ${playerScore}`;
+    enemyScoreDisplay.textContent = `Puntos: ${enemyScore}`;
+  }
+
+  function checkGameOver() {
+    if (playerScore >= 3 || enemyScore >= 3) {
+      gameActive = false;
+      barraInput.disabled = true;
+      sendBtn.disabled = true;
+      clearInterval(timerInterval);
+      if (playerScore > enemyScore) {
+        messages.innerHTML += `<br><strong>¡${playerName} es el campeón de Barras Piernooka! 🎤🔥</strong>`;
+      } else {
+        messages.innerHTML += `<br><strong>Perdiste la batalla contra ${selectedRival}. ¡Inténtalo de nuevo!</strong>`;
+      }
+      restartBtn.style.display = 'block';
+    } else {
+      setTimeout(() => {
+        messages.textContent = "Escribe tu mejor barra y presiona enviar.";
+        startTimer();
+      }, 3000);
+    }
+  }
+
+  sendBtn.addEventListener('click', () => {
+    if (!gameActive) return;
+    const playerBar = barraInput.value.trim();
+    if (playerBar.length === 0) {
+      alert("Debes escribir una barra antes de enviar.");
+      return;
+    }
+    clearInterval(timerInterval);
+    barraInput.disabled = true;
+    sendBtn.disabled = true;
+    enemyTurn(playerBar);
+  });
+
+  restartBtn.addEventListener('click', () => {
+    playerScore = 0;
+    enemyScore = 0;
+    gameActive = true;
+    updateScores();
+    messages.textContent = "Escribe tu mejor barra y presiona enviar.";
+    restartBtn.style.display = 'none';
+    startTimer();
+  });
+
+  startGameBtn.addEventListener('click', () => {
+    playerName = document.getElementById('playerNameInput').value.trim() || "Tú";
+    selectedRival = document.getElementById('rivalSelect').value;
+    playerNameDisplay.textContent = playerName;
+    enemyNameDisplay.textContent = selectedRival;
+
+    intro.style.display = 'none';
+    game.style.display = 'block';
+    gameActive = true;
+    startTimer();
+  });
+</script>
+
+</body>
+</html>
